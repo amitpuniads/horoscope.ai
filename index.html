@@ -1,0 +1,166 @@
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Horoscope</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAcqhj_ouJ6HZprOlwV1JG-_5rgMZ24dbA&libraries=places"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+        .form-container {
+            max-width: 500px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-container h2 {
+            text-align: center;
+        }
+        .form-container input, .form-container button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box;
+        }
+        .form-container button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .form-container button:hover {
+            background-color: #45a049;
+        }
+        .horoscope-result {
+            max-width: 500px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #4CAF50;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            font-size: 1.2rem; /* Increased text size */
+            color: #333;
+            line-height: 1.8;
+        }
+        .horoscope-list {
+            list-style: none;
+            padding: 0;
+        }
+        .horoscope-list li {
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f0f8ff; /* Light blue background */
+            transition: all 0.3s ease;
+        }
+        .horoscope-list li:hover {
+            background: #e6f7ff; /* Slightly darker on hover */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transform: scale(1.02);
+        }
+        .horoscope-list strong {
+            color: #4CAF50; /* Green for the aspect titles */
+        }
+        .error {
+            color: red;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Get Your Daily Horoscope</h2>
+        <form id="horoscope-form">
+            <label for="birth_date">Birth Date:</label>
+            <input type="date" id="birth_date" name="birth_date" required>
+            
+            <label for="birth_time">Birth Time:</label>
+            <input type="time" id="birth_time" name="birth_time" required>
+            
+            <label for="birth_place">Birth Place:</label>
+            <input type="text" id="birth_place" name="birth_place" placeholder="Enter your birthplace" required>
+            
+            <button type="submit">Get Horoscope</button>
+        </form>
+    </div>
+    <div id="horoscope-response" class="horoscope-result"></div>
+
+    <script>
+        let autocomplete;
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Google Places Autocomplete
+            const input = document.getElementById('birth_place');
+            autocomplete = new google.maps.places.Autocomplete(input);
+        });
+
+        document.getElementById('horoscope-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const birth_date = document.getElementById('birth_date').value;
+            const birth_time = document.getElementById('birth_time').value;
+            const birth_place = document.getElementById('birth_place').value;
+
+            // Get place details from Google Places Autocomplete
+            const place = autocomplete.getPlace();
+            if (!place || !place.geometry) {
+                alert('Please select a valid location from the suggestions.');
+                return;
+            }
+
+            const latitude = place.geometry.location.lat();
+            const longitude = place.geometry.location.lng();
+
+            // Send data to the server
+            const response = await fetch('https://horoscope-445513.et.r.appspot.com/api/daily-horoscope/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    birth_date: birth_date,
+                    birth_time: birth_time,
+                    latitude: latitude,
+                    longitude: longitude
+                })
+            });
+
+            const data = await response.json();
+            const horoscopeResponseDiv = document.getElementById('horoscope-response');
+            horoscopeResponseDiv.innerHTML = "";
+
+            if (data.daily_predictions) {
+                const predictions = data.daily_predictions.split("**").filter(Boolean);
+                const ul = document.createElement('ul');
+                ul.classList.add('horoscope-list');
+
+                predictions.forEach(prediction => {
+                    const parts = prediction.split(":");
+                    
+                    if (parts.length === 2) {
+                        const aspect = parts[0].trim();
+                        const message = parts[1].trim();
+                        const li = document.createElement('li');
+                        li.innerHTML = `<strong>${aspect}:</strong> ${message}`;
+                        ul.appendChild(li);
+                    } else {
+                        const li = document.createElement('li');
+                        li.textContent = prediction;
+                        ul.appendChild(li);
+                    }
+                });
+
+                horoscopeResponseDiv.appendChild(ul);
+            } else {
+                horoscopeResponseDiv.innerHTML = "<p class='error'>Error: Unable to fetch horoscope.</p>";
+            }
+        });
+    </script>
+</body>
+</html>
